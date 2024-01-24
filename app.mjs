@@ -1,6 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import mime from 'mime-types';
 
 // Load environment variables
 dotenv.config();
@@ -14,6 +15,10 @@ const callbackURL = process.env.CALLBACK_URL;
 function getFileContentBase64(filePath) {
     const fileContent = fs.readFileSync(filePath);
     return fileContent.toString('base64');
+}
+
+function getFileMimeType(filePath) {
+    return mime.lookup(filePath) || 'application/octet-stream';
 }
 
 async function authenticate() {
@@ -34,14 +39,17 @@ async function authenticate() {
     }
 }
 
-async function scanFile(accessToken, fileContentBase64) {
+async function scanFile(accessToken, fileContentBase64, filePath) {
     console.log('Initiating file scan...');
     const url = 'https://api.res418.com/filesecure/standard/single/scan';
+    const fileName = filePath.split('/').pop();
+    const contentType = getFileMimeType(filePath); // Determine file type
+
     const data = {
         fileContent: fileContentBase64,
         metadata: {
-            fileName: localFilePath.split('/').pop(),
-            contentType: "text/plain", // Update this as per the file type
+            fileName: fileName,
+            contentType: contentType, // Updated to dynamic file type
             callbackUrl: callbackURL,
             fileId: "file123", // Update as needed
             origin: "user-upload",
@@ -75,7 +83,7 @@ async function main() {
     try {
         const accessToken = await authenticate();
         const fileContentBase64 = getFileContentBase64(localFilePath);
-        await scanFile(accessToken, fileContentBase64);
+        await scanFile(accessToken, fileContentBase64, localFilePath);
     } catch (error) {
         console.error('An error occurred:', error);
     }
